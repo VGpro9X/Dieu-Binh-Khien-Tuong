@@ -16,6 +16,16 @@ export type UnitClassId =
 
 export type DamageType = 'vat-ly' | 'phep';
 
+export type StrategicPointType =
+  | 'nha'
+  | 'nuoc'
+  | 'rung'
+  | 'nui'
+  | 'mo-vang'
+  | 'mo-bac'
+  | 'mo-sat'
+  | 'thanh-tri';
+
 export interface GridPosition {
   x: number;
   y: number;
@@ -75,4 +85,32 @@ export interface FortressDefinition {
   team: TeamId;
   position: GridPosition;
   spawnTiles: GridPosition[];
+}
+
+export interface StrategicPointDefinition {
+  id: string;
+  type: StrategicPointType;
+  name: string;
+  shortLabel: string;
+  position: GridPosition;
+  income: number;
+  balanceValue: number;
+  armorBonus: number;
+  resistanceBonus: number;
+  healPerTurn: number;
+  enablesSummoning: boolean;
+  effectText: string;
+}
+
+export interface StrategicPointState extends StrategicPointDefinition {
+  owner: TeamId | null;
+}
+
+export interface TerritorySummary {
+  ownedCount: number;
+  incomeBonus: number;
+  armorBonus: number;
+  resistanceBonus: number;
+  healPerTurn: number;
+  fortressCount: number;
 }

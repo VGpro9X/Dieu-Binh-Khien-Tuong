@@ -31,8 +31,15 @@ export class EconomyManager {
     return true;
   }
 
-  grantTurnIncome(team: TeamId): number {
-    this.points[team] += this.baseIncome;
-    return this.baseIncome;
+  grantTurnIncome(team: TeamId, bonusIncome = 0): number {
+    const total = this.baseIncome + Math.max(0, bonusIncome);
+    this.points[team] += total;
+    return total;
+  }
+
+  grantBonusIncome(team: TeamId, bonusIncome: number): number {
+    const bonus = Math.max(0, bonusIncome);
+    this.points[team] += bonus;
+    return bonus;
   }
 }
