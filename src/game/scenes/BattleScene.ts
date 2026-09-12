@@ -1,17 +1,27 @@
 import * as Phaser from 'phaser';
+import { EconomyManager } from '../core/EconomyManager';
 import { TurnManager } from '../core/TurnManager';
 import type {
   CombatUnitState,
+  FortressDefinition,
   GridPosition,
   TeamId,
   TerrainId,
+  UnitClassId,
 } from '../core/types';
 import {
   BOARD_CONFIG,
+  ECONOMY_CONFIG,
   INITIAL_UNITS,
+  MAIN_FORTRESSES,
+  SUMMON_ORDER,
+  UNIT_DEFINITIONS,
+  createSummonedUnit,
+  getSpawnTilesForTeam,
   getTerrainAt,
   getTerrainMovementCost,
-} from '../data/v03';
+  isFortressTile,
+} from '../data/v04';
 import {
   buildPath,
   calculateReachable,
@@ -31,9 +41,19 @@ interface UnitView {
   healthFill: Phaser.GameObjects.Rectangle;
 }
 
+interface SummonButtonView {
+  button: Phaser.GameObjects.Rectangle;
+  label: Phaser.GameObjects.Text;
+}
+
 const TEAM_COLORS: Record<TeamId, number> = {
   xanh: 0x38bdf8,
   do: 0xfb7185,
+};
+
+const TEAM_DARK_COLORS: Record<TeamId, number> = {
+  xanh: 0x164e63,
+  do: 0x881337,
 };
 
 const TEAM_NAMES: Record<TeamId, string> = {
@@ -50,6 +70,10 @@ const TERRAIN_COLORS: Record<TerrainId, [number, number]> = {
 
 export class BattleScene extends Phaser.Scene {
   private readonly turnManager = new TurnManager();
+  private readonly economyManager = new EconomyManager(
+    ECONOMY_CONFIG.startingPoints,
+    ECONOMY_CONFIG.baseIncome,
+  );
   private readonly units: CombatUnitState[] = INITIAL_UNITS.map((unit) => ({
     ...unit,
     position: { ...unit.position },
@@ -57,18 +81,23 @@ export class BattleScene extends Phaser.Scene {
 
   private readonly tileViews = new Map<string, Phaser.GameObjects.Rectangle>();
   private readonly unitViews = new Map<string, UnitView>();
+  private readonly summonButtons = new Map<UnitClassId, SummonButtonView>();
 
   private selectedTile: GridPosition | null = null;
   private selectedUnitId: string | null = null;
   private hoveredTile: GridPosition | null = null;
   private hoveredTargetId: string | null = null;
+  private pendingSummonClass: UnitClassId | null = null;
   private reachableTiles = new Map<string, MovementNode>();
   private statusMessage = '';
   private isAnimating = false;
+  private nextUnitSerial = 1;
 
   private turnText!: Phaser.GameObjects.Text;
+  private economyText!: Phaser.GameObjects.Text;
   private selectionText!: Phaser.GameObjects.Text;
   private hintText!: Phaser.GameObjects.Text;
+  private summonInstructionText!: Phaser.GameObjects.Text;
   private endTurnButton!: Phaser.GameObjects.Rectangle;
   private endTurnLabel!: Phaser.GameObjects.Text;
 
@@ -80,6 +109,7 @@ export class BattleScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#0b1220');
     this.drawHeader();
     this.drawBoard();
+    this.drawFortresses();
     this.drawUnits();
     this.drawSidePanel();
     this.refreshAll();
@@ -93,7 +123,7 @@ export class BattleScene extends Phaser.Scene {
       color: '#f8fafc',
     });
 
-    this.add.text(49, 70, 'V0.3 • Combat core & 6 lớp quân', {
+    this.add.text(49, 70, 'V0.4 • Điểm Điều Binh & Triệu Hồi', {
       fontFamily: 'system-ui, sans-serif',
       fontSize: '16px',
       color: '#94a3b8',
@@ -144,7 +174,7 @@ export class BattleScene extends Phaser.Scene {
             fontSize: '9px',
             color: '#ffffff',
           })
-          .setAlpha(0.18);
+          .setAlpha(0.16);
 
         if (terrain.shortLabel) {
           this.add
@@ -155,7 +185,20 @@ export class BattleScene extends Phaser.Scene {
               color: '#ffffff',
             })
             .setOrigin(1, 1)
-            .setAlpha(0.4);
+            .setAlpha(0.38);
+        }
+
+        const spawnOwner = this.getSpawnOwner(position);
+        if (spawnOwner) {
+          this.add
+            .circle(
+              center.x - tileSize / 2 + 8,
+              center.y + tileSize / 2 - 8,
+              3,
+              TEAM_COLORS[spawnOwner],
+              0.7,
+            )
+            .setDepth(2);
         }
       }
     }
@@ -176,6 +219,26 @@ export class BattleScene extends Phaser.Scene {
         color: '#fda4af',
       })
       .setOrigin(1, 0);
+  }
+
+  private drawFortresses(): void {
+    for (const fortress of Object.values(MAIN_FORTRESSES)) {
+      const center = this.gridToScreen(fortress.position);
+      const base = this.add
+        .rectangle(0, 0, 40, 40, TEAM_DARK_COLORS[fortress.team], 1)
+        .setStrokeStyle(3, TEAM_COLORS[fortress.team], 0.95);
+      const roof = this.add.rectangle(0, -13, 30, 7, TEAM_COLORS[fortress.team], 0.85);
+      const label = this.add
+        .text(0, 4, 'THÀNH', {
+          fontFamily: 'system-ui, sans-serif',
+          fontSize: '9px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+        })
+        .setOrigin(0.5);
+
+      this.add.container(center.x, center.y, [base, roof, label]).setDepth(4);
+    }
   }
 
   private drawUnits(): void {
@@ -223,88 +286,186 @@ export class BattleScene extends Phaser.Scene {
       .rectangle(1031, 382, 418, 604, 0x111827, 0.98)
       .setStrokeStyle(2, 0x334155, 1);
 
-    this.add.text(842, 100, 'CHIẾN TRƯỜNG', {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: '14px',
-      fontStyle: 'bold',
-      color: '#94a3b8',
-    });
-
-    this.turnText = this.add.text(842, 130, '', {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: '24px',
-      fontStyle: 'bold',
-      color: '#f8fafc',
-      lineSpacing: 8,
-    });
-
-    this.add.rectangle(1030, 220, 360, 1, 0x334155, 1);
-
-    this.add.text(842, 241, 'THÔNG TIN ĐANG CHỌN', {
+    this.add.text(842, 96, 'CHIẾN TRƯỜNG', {
       fontFamily: 'system-ui, sans-serif',
       fontSize: '13px',
       fontStyle: 'bold',
       color: '#94a3b8',
     });
 
-    this.selectionText = this.add.text(842, 267, '', {
+    this.turnText = this.add.text(842, 120, '', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '22px',
+      fontStyle: 'bold',
+      color: '#f8fafc',
+      lineSpacing: 4,
+    });
+
+    this.economyText = this.add.text(1040, 122, '', {
       fontFamily: 'system-ui, sans-serif',
       fontSize: '14px',
+      color: '#fbbf24',
+      lineSpacing: 5,
+      wordWrap: { width: 180 },
+    });
+
+    this.add.rectangle(1030, 205, 360, 1, 0x334155, 1);
+
+    this.add.text(842, 220, 'THÔNG TIN ĐANG CHỌN', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '12px',
+      fontStyle: 'bold',
+      color: '#94a3b8',
+    });
+
+    this.selectionText = this.add.text(842, 243, '', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '13px',
       color: '#e2e8f0',
+      lineSpacing: 2,
+      wordWrap: { width: 350 },
+    });
+
+    this.hintText = this.add.text(842, 394, '', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '12px',
+      color: '#94a3b8',
       lineSpacing: 3,
       wordWrap: { width: 350 },
     });
 
-    this.hintText = this.add.text(842, 455, '', {
+    this.add.rectangle(1030, 472, 360, 1, 0x334155, 1);
+
+    this.add.text(842, 482, 'TRIỆU HỒI QUÂN', {
       fontFamily: 'system-ui, sans-serif',
-      fontSize: '13px',
-      color: '#94a3b8',
-      lineSpacing: 4,
-      wordWrap: { width: 350 },
-    });
-
-    this.add.text(842, 535, 'V0.3 • CHỈ DẪN', {
-      fontFamily: 'ui-monospace, monospace',
       fontSize: '12px',
-      color: '#64748b',
+      fontStyle: 'bold',
+      color: '#c4b5fd',
     });
 
-    this.add.text(
-      842,
-      557,
-      '• Ô xanh: vùng di chuyển\n• Viền đỏ: tầm đánh / mục tiêu hợp lệ\n• Rê lên địch để xem sát thương dự kiến',
-      {
-        fontFamily: 'ui-monospace, monospace',
-        fontSize: '12px',
-        color: '#64748b',
-        lineSpacing: 4,
-      },
-    );
+    this.summonInstructionText = this.add.text(965, 482, '', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '10px',
+      color: '#94a3b8',
+      wordWrap: { width: 225 },
+    });
+
+    this.createSummonButtons();
 
     this.endTurnButton = this.add
-      .rectangle(1030, 642, 340, 58, 0x2563eb, 1)
+      .rectangle(1030, 650, 340, 42, 0x2563eb, 1)
       .setStrokeStyle(2, 0x60a5fa, 0.8)
       .setInteractive({ useHandCursor: true });
 
     this.endTurnLabel = this.add
-      .text(1030, 642, 'KẾT THÚC LƯỢT', {
+      .text(1030, 650, 'KẾT THÚC LƯỢT', {
         fontFamily: 'system-ui, sans-serif',
-        fontSize: '18px',
+        fontSize: '16px',
         fontStyle: 'bold',
         color: '#ffffff',
       })
       .setOrigin(0.5);
 
-    this.endTurnButton.on('pointerover', () => this.endTurnButton.setFillStyle(0x1d4ed8, 1));
-    this.endTurnButton.on('pointerout', () => this.endTurnButton.setFillStyle(0x2563eb, 1));
     this.endTurnButton.on('pointerdown', () => this.endTurn());
     this.endTurnLabel.setDepth(this.endTurnButton.depth + 1);
+  }
+
+  private createSummonButtons(): void {
+    const xPositions = [930, 1120];
+    const yPositions = [520, 557, 594];
+
+    SUMMON_ORDER.forEach((classId, index) => {
+      const definition = UNIT_DEFINITIONS[classId];
+      const column = index % 2;
+      const row = Math.floor(index / 2);
+      const x = xPositions[column];
+      const y = yPositions[row];
+
+      const button = this.add
+        .rectangle(x, y, 170, 30, 0x1e293b, 1)
+        .setStrokeStyle(1, 0x475569, 1)
+        .setInteractive({ useHandCursor: true });
+      const label = this.add
+        .text(x, y, `${definition.name} • ${definition.summonCost}`, {
+          fontFamily: 'system-ui, sans-serif',
+          fontSize: '12px',
+          color: '#e2e8f0',
+        })
+        .setOrigin(0.5);
+
+      button.on('pointerdown', () => this.handleSummonButton(classId));
+      this.summonButtons.set(classId, { button, label });
+    });
+  }
+
+  private handleSummonButton(classId: UnitClassId): void {
+    if (this.isAnimating) return;
+
+    if (this.pendingSummonClass === classId) {
+      this.pendingSummonClass = null;
+      this.statusMessage = 'Đã hủy chế độ triệu hồi.';
+      this.refreshAll();
+      return;
+    }
+
+    const activeTeam = this.turnManager.getActiveTeam();
+    const definition = UNIT_DEFINITIONS[classId];
+
+    if (!this.economyManager.canAfford(activeTeam, definition.summonCost)) {
+      this.statusMessage = `Không đủ Điểm Điều Binh để triệu hồi ${definition.name}.`;
+      this.refreshAll();
+      return;
+    }
+
+    if (this.getValidSpawnTiles(classId).length === 0) {
+      this.statusMessage = `Không còn ô triệu hồi hợp lệ cho ${definition.name}.`;
+      this.refreshAll();
+      return;
+    }
+
+    this.pendingSummonClass = classId;
+    this.selectedTile = null;
+    this.selectedUnitId = null;
+    this.hoveredTile = null;
+    this.hoveredTargetId = null;
+    this.reachableTiles.clear();
+    this.statusMessage = `Đã chọn ${definition.name}. Bấm một ô triệu hồi đang sáng quanh Thành Chính.`;
+    this.refreshAll();
   }
 
   private handleTileClick(position: GridPosition): void {
     if (this.isAnimating) return;
 
     const clickedUnit = this.findUnitAt(position);
+
+    if (this.pendingSummonClass) {
+      if (clickedUnit) {
+        this.pendingSummonClass = null;
+        this.selectUnit(clickedUnit);
+        return;
+      }
+
+      if (this.canSummonAt(this.pendingSummonClass, position)) {
+        this.summonUnitAt(position);
+        return;
+      }
+
+      this.statusMessage = 'Ô này không phải ô triệu hồi hợp lệ hoặc đang bị chiếm.';
+      this.refreshAll();
+      return;
+    }
+
+    if (this.turnManager.getPhase() !== 'chien-dau') {
+      if (clickedUnit) {
+        this.selectUnit(clickedUnit);
+      } else {
+        this.selectTile(position);
+      }
+      this.statusMessage = 'Giai đoạn mở đầu: hãy chọn một loại quân và triệu hồi đúng 1 đơn vị.';
+      this.refreshAll();
+      return;
+    }
+
     const selectedUnit = this.getSelectedUnit();
     const activeTeam = this.turnManager.getActiveTeam();
 
@@ -338,7 +499,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private handleTileHover(position: GridPosition): void {
-    if (this.isAnimating) return;
+    if (this.isAnimating || this.pendingSummonClass) return;
+    if (this.turnManager.getPhase() !== 'chien-dau') return;
 
     const selectedUnit = this.getSelectedUnit();
     if (!selectedUnit || selectedUnit.team !== this.turnManager.getActiveTeam()) return;
@@ -369,6 +531,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private handleTileOut(position: GridPosition): void {
+    if (this.pendingSummonClass) return;
+
     const target = this.findUnitAt(position);
     if (target?.id === this.hoveredTargetId) {
       this.hoveredTargetId = null;
@@ -381,14 +545,67 @@ export class BattleScene extends Phaser.Scene {
     this.refreshAll();
   }
 
+  private summonUnitAt(position: GridPosition): void {
+    const classId = this.pendingSummonClass;
+    if (!classId || !this.canSummonAt(classId, position)) return;
+
+    const activeTeam = this.turnManager.getActiveTeam();
+    const definition = UNIT_DEFINITIONS[classId];
+    if (!this.economyManager.spend(activeTeam, definition.summonCost)) {
+      this.statusMessage = 'Điểm Điều Binh đã thay đổi, không thể hoàn tất triệu hồi.';
+      this.refreshAll();
+      return;
+    }
+
+    const id = `${activeTeam}-${classId}-${this.nextUnitSerial}`;
+    this.nextUnitSerial += 1;
+    const unit = createSummonedUnit(id, classId, activeTeam, position);
+    this.units.push(unit);
+    this.createUnitView(unit);
+
+    if (this.turnManager.getPhase() === 'trieu-hoi-mo-dau') {
+      const summonedTeam = activeTeam;
+      const battleStarted = this.turnManager.completeOpeningSummon();
+      this.pendingSummonClass = null;
+      this.clearSelection();
+
+      if (battleStarted) {
+        const income = this.economyManager.grantTurnIncome('xanh');
+        this.statusMessage = `${TEAM_NAMES[summonedTeam]} đã triệu hồi ${definition.name}. Giai đoạn chiến đấu bắt đầu — Phe Xanh nhận +${income} Điểm Điều Binh.`;
+      } else {
+        this.statusMessage = `${TEAM_NAMES[summonedTeam]} đã triệu hồi ${definition.name}. Đến lượt Phe Đỏ triệu hồi 1 đơn vị mở đầu.`;
+      }
+
+      this.refreshAll();
+      return;
+    }
+
+    this.statusMessage = `${TEAM_NAMES[activeTeam]} triệu hồi ${definition.name} (-${definition.summonCost}). Quân mới có thể hành động ngay.`;
+    this.clearSelection();
+
+    if (
+      !this.economyManager.canAfford(activeTeam, definition.summonCost) ||
+      this.getValidSpawnTiles(classId).length === 0
+    ) {
+      this.pendingSummonClass = null;
+    }
+
+    this.refreshAll();
+  }
+
   private selectUnit(unit: CombatUnitState): void {
     this.selectedTile = { ...unit.position };
     this.selectedUnitId = unit.id;
     this.hoveredTile = null;
     this.hoveredTargetId = null;
+    this.pendingSummonClass = null;
     this.statusMessage = '';
 
-    if (unit.team === this.turnManager.getActiveTeam() && !unit.hasMoved) {
+    if (
+      this.turnManager.getPhase() === 'chien-dau' &&
+      unit.team === this.turnManager.getActiveTeam() &&
+      !unit.hasMoved
+    ) {
       this.reachableTiles = this.calculateMovementFor(unit);
     } else {
       this.reachableTiles.clear();
@@ -407,6 +624,14 @@ export class BattleScene extends Phaser.Scene {
     this.refreshAll();
   }
 
+  private clearSelection(): void {
+    this.selectedTile = null;
+    this.selectedUnitId = null;
+    this.hoveredTile = null;
+    this.hoveredTargetId = null;
+    this.reachableTiles.clear();
+  }
+
   private calculateMovementFor(unit: CombatUnitState): Map<string, MovementNode> {
     return calculateReachable({
       start: unit.position,
@@ -415,6 +640,7 @@ export class BattleScene extends Phaser.Scene {
       getMovementCost: (position) =>
         getTerrainMovementCost(position.x, position.y, unit.movementType),
       isBlocked: (position) =>
+        isFortressTile(position) ||
         this.units.some(
           (candidate) =>
             candidate.id !== unit.id &&
@@ -480,6 +706,7 @@ export class BattleScene extends Phaser.Scene {
 
   private canAttackTarget(attacker: CombatUnitState, target: CombatUnitState): boolean {
     return (
+      this.turnManager.getPhase() === 'chien-dau' &&
       attacker.team !== target.team &&
       !attacker.hasActed &&
       isInAttackRange(attacker, target.position)
@@ -573,9 +800,7 @@ export class BattleScene extends Phaser.Scene {
     this.unitViews.delete(target.id);
 
     if (this.selectedUnitId === target.id) {
-      this.selectedUnitId = null;
-      this.selectedTile = null;
-      this.reachableTiles.clear();
+      this.clearSelection();
     }
   }
 
@@ -598,6 +823,13 @@ export class BattleScene extends Phaser.Scene {
   private endTurn(): void {
     if (this.isAnimating) return;
 
+    if (this.turnManager.getPhase() !== 'chien-dau') {
+      this.statusMessage = 'Chưa thể kết thúc lượt: mỗi phe phải triệu hồi 1 đơn vị mở đầu trước.';
+      this.refreshAll();
+      return;
+    }
+
+    this.pendingSummonClass = null;
     this.turnManager.endTurn();
     const nextTeam = this.turnManager.getActiveTeam();
 
@@ -608,31 +840,41 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
-    this.selectedTile = null;
-    this.selectedUnitId = null;
-    this.hoveredTile = null;
-    this.hoveredTargetId = null;
-    this.reachableTiles.clear();
-    this.statusMessage = `Đến lượt ${TEAM_NAMES[nextTeam]}.`;
+    const income = this.economyManager.grantTurnIncome(nextTeam);
+    this.clearSelection();
+    this.statusMessage = `Đến lượt ${TEAM_NAMES[nextTeam]}. Nhận +${income} Điểm Điều Binh.`;
     this.refreshAll();
   }
 
   private refreshAll(): void {
     this.refreshBoardSelection();
     this.refreshUnitSelection();
+    this.refreshSummonButtons();
     this.refreshHud();
   }
 
   private refreshBoardSelection(): void {
     const { columns, rows } = BOARD_CONFIG;
-    const previewPath = this.hoveredTile
+    const isSummonMode = this.pendingSummonClass !== null;
+    const previewPath = !isSummonMode && this.hoveredTile
       ? buildPath(this.reachableTiles, this.hoveredTile)
       : [];
     const previewKeys = new Set(previewPath.map((position) => positionKey(position)));
     const selectedUnit = this.getSelectedUnit();
     const selectedUnitKey = selectedUnit ? positionKey(selectedUnit.position) : null;
     const activeSelected =
-      selectedUnit?.team === this.turnManager.getActiveTeam() ? selectedUnit : null;
+      this.turnManager.getPhase() === 'chien-dau' &&
+      selectedUnit?.team === this.turnManager.getActiveTeam()
+        ? selectedUnit
+        : null;
+    const activeSpawnKeys = new Set(
+      getSpawnTilesForTeam(this.turnManager.getActiveTeam()).map((position) => positionKey(position)),
+    );
+    const validSpawnKeys = new Set(
+      this.pendingSummonClass
+        ? this.getValidSpawnTiles(this.pendingSummonClass).map((position) => positionKey(position))
+        : [],
+    );
 
     for (let y = 0; y < rows; y += 1) {
       for (let x = 0; x < columns; x += 1) {
@@ -642,44 +884,53 @@ export class BattleScene extends Phaser.Scene {
         if (!tile) continue;
 
         const isSelected = this.selectedTile?.x === x && this.selectedTile?.y === y;
-        const isReachable = this.reachableTiles.has(key) && key !== selectedUnitKey;
-        const isPreviewPath = previewKeys.has(key);
+        const isReachable = !isSummonMode && this.reachableTiles.has(key) && key !== selectedUnitKey;
+        const isPreviewPath = !isSummonMode && previewKeys.has(key);
         const isAttackRange = Boolean(
-          activeSelected &&
+          !isSummonMode &&
+            activeSelected &&
             !activeSelected.hasActed &&
             isInAttackRange(activeSelected, position),
         );
-        const isHoveredTarget = this.hoveredTargetId
+        const isHoveredTarget = !isSummonMode && this.hoveredTargetId
           ? this.findUnitAt(position)?.id === this.hoveredTargetId
           : false;
+        const isActiveSpawn = activeSpawnKeys.has(key);
+        const isValidSpawn = validSpawnKeys.has(key);
 
         let fillColor = this.getBaseTileColor(position);
         let strokeWidth = 1;
         let strokeColor = 0x0f172a;
 
-        if (isAttackRange) {
-          strokeWidth = 2;
-          strokeColor = 0xfb7185;
-        }
-
-        if (isReachable) {
-          fillColor = 0x155e75;
-          if (!isAttackRange) {
+        if (isSummonMode && isActiveSpawn) {
+          fillColor = isValidSpawn ? 0x4c1d95 : 0x3f3f46;
+          strokeWidth = isValidSpawn ? 3 : 2;
+          strokeColor = isValidSpawn ? 0xc4b5fd : 0x71717a;
+        } else {
+          if (isAttackRange) {
             strokeWidth = 2;
-            strokeColor = 0x38bdf8;
+            strokeColor = 0xfb7185;
           }
-        }
 
-        if (isPreviewPath) {
-          fillColor = 0x9a5b20;
-          strokeWidth = 3;
-          strokeColor = 0xfbbf24;
-        }
+          if (isReachable) {
+            fillColor = 0x155e75;
+            if (!isAttackRange) {
+              strokeWidth = 2;
+              strokeColor = 0x38bdf8;
+            }
+          }
 
-        if (isHoveredTarget) {
-          fillColor = 0x7f1d1d;
-          strokeWidth = 4;
-          strokeColor = 0xfca5a5;
+          if (isPreviewPath) {
+            fillColor = 0x9a5b20;
+            strokeWidth = 3;
+            strokeColor = 0xfbbf24;
+          }
+
+          if (isHoveredTarget) {
+            fillColor = 0x7f1d1d;
+            strokeWidth = 4;
+            strokeColor = 0xfca5a5;
+          }
         }
 
         if (isSelected) {
@@ -697,6 +948,7 @@ export class BattleScene extends Phaser.Scene {
   private refreshUnitSelection(): void {
     const activeTeam = this.turnManager.getActiveTeam();
     const selectedUnit = this.getSelectedUnit();
+    const battlePhase = this.turnManager.getPhase() === 'chien-dau';
 
     for (const unit of this.units) {
       const view = this.unitViews.get(unit.id);
@@ -706,7 +958,8 @@ export class BattleScene extends Phaser.Scene {
       const isActive = unit.team === activeTeam;
       const isFullySpent = unit.hasMoved && unit.hasActed;
       const isAttackable = Boolean(
-        selectedUnit &&
+        battlePhase &&
+          selectedUnit &&
           selectedUnit.team === activeTeam &&
           this.canAttackTarget(selectedUnit, unit),
       );
@@ -735,21 +988,81 @@ export class BattleScene extends Phaser.Scene {
       }
 
       view.circle.setStrokeStyle(strokeWidth, strokeColor, strokeAlpha);
-      view.container.setAlpha(isActive ? (isFullySpent ? 0.58 : 1) : 0.72);
+      view.container.setAlpha(
+        isActive && battlePhase ? (isFullySpent ? 0.58 : 1) : isActive ? 0.9 : 0.72,
+      );
+    }
+  }
+
+  private refreshSummonButtons(): void {
+    const activeTeam = this.turnManager.getActiveTeam();
+    const points = this.economyManager.getPoints(activeTeam);
+
+    for (const classId of SUMMON_ORDER) {
+      const definition = UNIT_DEFINITIONS[classId];
+      const view = this.summonButtons.get(classId);
+      if (!view) continue;
+
+      const affordable = points >= definition.summonCost;
+      const hasSpace = this.getValidSpawnTiles(classId).length > 0;
+      const enabled = affordable && hasSpace && !this.isAnimating;
+      const selected = this.pendingSummonClass === classId;
+
+      if (selected) {
+        view.button.setFillStyle(0x6d28d9, 1).setStrokeStyle(2, 0xfbbf24, 1);
+        view.label.setColor('#ffffff').setAlpha(1);
+      } else if (enabled) {
+        view.button.setFillStyle(0x263449, 1).setStrokeStyle(1, 0x64748b, 1);
+        view.label.setColor('#e2e8f0').setAlpha(1);
+      } else {
+        view.button.setFillStyle(0x111827, 1).setStrokeStyle(1, 0x334155, 0.7);
+        view.label.setColor('#64748b').setAlpha(0.7);
+      }
     }
   }
 
   private refreshHud(): void {
     const activeTeam = this.turnManager.getActiveTeam();
     const activeColor = activeTeam === 'xanh' ? '#7dd3fc' : '#fda4af';
+    const phase = this.turnManager.getPhase();
+    const points = this.economyManager.getPoints(activeTeam);
 
-    this.turnText.setText(`Vòng ${this.turnManager.getRound()}\n${TEAM_NAMES[activeTeam]}`);
+    if (phase === 'trieu-hoi-mo-dau') {
+      this.turnText.setText(`TRIỆU HỒI MỞ ĐẦU\n${TEAM_NAMES[activeTeam]}`);
+    } else {
+      this.turnText.setText(`Vòng ${this.turnManager.getRound()}\n${TEAM_NAMES[activeTeam]}`);
+    }
     this.turnText.setColor(activeColor);
+
+    this.economyText.setText(
+      `Điểm Điều Binh: ${points}\nThu nhập: +${this.economyManager.getBaseIncome()}/lượt`,
+    );
+
+    if (phase === 'trieu-hoi-mo-dau') {
+      this.summonInstructionText.setText('Mỗi phe gọi đúng 1 quân mở đầu.');
+      this.endTurnButton.setFillStyle(0x374151, 1).setStrokeStyle(1, 0x64748b, 0.6);
+      this.endTurnLabel.setText('CHƯA THỂ KẾT THÚC LƯỢT').setColor('#94a3b8');
+    } else {
+      this.summonInstructionText.setText('Có thể gọi nhiều quân nếu còn điểm + ô trống.');
+      this.endTurnButton.setFillStyle(0x2563eb, 1).setStrokeStyle(2, 0x60a5fa, 0.8);
+      this.endTurnLabel.setText('KẾT THÚC LƯỢT').setColor('#ffffff');
+    }
+
+    if (this.pendingSummonClass) {
+      const definition = UNIT_DEFINITIONS[this.pendingSummonClass];
+      this.selectionText.setText(
+        `Đang triệu hồi: ${definition.name}\nGiá: ${definition.summonCost} Điểm Điều Binh\nHP: ${definition.maxHp} • Di chuyển: ${definition.movement}\nVai trò: ${definition.role}`,
+      );
+      this.hintText.setText(
+        this.withStatus('Bấm một ô màu tím quanh Thành Chính. Bấm lại nút quân để hủy, hoặc bấm một quân đang có để chuyển sang điều khiển.'),
+      );
+      return;
+    }
 
     const selectedUnit = this.getSelectedUnit();
     if (selectedUnit) {
       const terrain = getTerrainAt(selectedUnit.position.x, selectedUnit.position.y);
-      const canCommand = selectedUnit.team === activeTeam;
+      const canCommand = phase === 'chien-dau' && selectedUnit.team === activeTeam;
       const moveStatus = selectedUnit.hasMoved ? 'Đã dùng' : 'Sẵn sàng';
       const actionStatus = selectedUnit.hasActed ? 'Đã dùng' : 'Sẵn sàng';
       const attackLabel = selectedUnit.damageType === 'vat-ly'
@@ -760,7 +1073,7 @@ export class BattleScene extends Phaser.Scene {
         : `${selectedUnit.minAttackRange}–${selectedUnit.maxAttackRange}`;
 
       this.selectionText.setText(
-        `${selectedUnit.name} • ${TEAM_NAMES[selectedUnit.team]}\nVai trò: ${selectedUnit.role}\nHP: ${selectedUnit.hp} / ${selectedUnit.maxHp}\nCông: ${attackLabel}\nGiáp: ${selectedUnit.armor} • Kháng: ${selectedUnit.resistance}\nDi chuyển: ${selectedUnit.movement} • Tầm đánh: ${rangeLabel}\nĐịa hình: ${terrain.name}\nDi chuyển: ${moveStatus} • Hành động: ${actionStatus}`,
+        `${selectedUnit.name} • ${TEAM_NAMES[selectedUnit.team]}\nVai trò: ${selectedUnit.role}\nHP: ${selectedUnit.hp} / ${selectedUnit.maxHp}\nCông: ${attackLabel}\nGiáp: ${selectedUnit.armor} • Kháng: ${selectedUnit.resistance}\nDi chuyển: ${selectedUnit.movement} • Tầm: ${rangeLabel}\nĐịa hình: ${terrain.name}\nDi chuyển: ${moveStatus} • Hành động: ${actionStatus}`,
       );
 
       const hoveredTarget = this.getHoveredTarget();
@@ -771,21 +1084,23 @@ export class BattleScene extends Phaser.Scene {
         const damageType = selectedUnit.damageType === 'vat-ly' ? 'vật lý' : 'phép';
         this.hintText.setText(
           this.withStatus(
-            `Mục tiêu: ${hoveredTarget.name}\nSát thương dự kiến: ${preview.min}–${preview.max} (${damageType})\nHP mục tiêu sau đòn: ${remainingLow}–${remainingHigh}\nBấm mục tiêu để tấn công.`,
+            `Mục tiêu: ${hoveredTarget.name}\nSát thương dự kiến: ${preview.min}–${preview.max} (${damageType})\nHP sau đòn: ${remainingLow}–${remainingHigh}. Bấm mục tiêu để đánh.`,
           ),
         );
         return;
       }
 
       let hint = '';
-      if (!canCommand) {
+      if (phase !== 'chien-dau') {
+        hint = 'Giai đoạn mở đầu chưa cho phép điều quân. Hãy hoàn tất triệu hồi của cả hai phe.';
+      } else if (!canCommand) {
         hint = 'Đây là quân đối phương. Có thể xem chỉ số nhưng không thể ra lệnh.';
       } else if (!selectedUnit.hasMoved && !selectedUnit.hasActed) {
         hint = 'Có thể di chuyển hoặc tấn công trước. Sau đó vẫn còn quyền còn lại nếu chưa dùng.';
       } else if (selectedUnit.hasMoved && !selectedUnit.hasActed) {
         hint = 'Đã di chuyển. Các mục tiêu có viền đỏ vẫn có thể bị tấn công.';
       } else if (!selectedUnit.hasMoved && selectedUnit.hasActed) {
-        hint = 'Đã dùng hành động tấn công nhưng vẫn có thể di chuyển.';
+        hint = 'Đã dùng hành động nhưng vẫn có thể di chuyển.';
       } else {
         hint = 'Đơn vị này đã dùng cả di chuyển và hành động trong lượt hiện tại.';
       }
@@ -795,20 +1110,74 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (!this.selectedTile) {
-      this.selectionText.setText('Chưa chọn ô nào.');
+      this.selectionText.setText(
+        phase === 'trieu-hoi-mo-dau'
+          ? 'Chưa có lệnh. Chọn một loại quân ở bảng Triệu Hồi.'
+          : 'Chưa chọn ô hoặc đơn vị nào.',
+      );
       this.hintText.setText(
-        this.withStatus('Chọn quân của phe đang hành động để xem vùng di chuyển và tầm đánh.'),
+        this.withStatus(
+          phase === 'trieu-hoi-mo-dau'
+            ? 'Mỗi phe có 8 Điểm Điều Binh ban đầu và chỉ gọi 1 quân trong giai đoạn mở đầu.'
+            : 'Có thể tích Điểm Điều Binh hoặc tiêu hết trong cùng lượt để gọi nhiều quân phòng thủ/phản công.',
+        ),
+      );
+      return;
+    }
+
+    const fortress = this.findFortressAt(this.selectedTile);
+    if (fortress) {
+      this.selectionText.setText(
+        `Thành Chính • ${TEAM_NAMES[fortress.team]}\nVị trí: (${fortress.position.x}, ${fortress.position.y})\nVai trò V0.4: Trung tâm triệu hồi\nÔ triệu hồi xung quanh: ${fortress.spawnTiles.length}`,
+      );
+      this.hintText.setText(
+        this.withStatus('Thành Chính hiện chặn di chuyển. HP Thành và điều kiện phá Thành sẽ được nối vào các mốc sau.'),
       );
       return;
     }
 
     const terrain = getTerrainAt(this.selectedTile.x, this.selectedTile.y);
     const infantryCost = terrain.movementCost['bo-binh'];
+    const spawnOwner = this.getSpawnOwner(this.selectedTile);
     this.selectionText.setText(
-      `Ô (${this.selectedTile.x}, ${this.selectedTile.y})\nĐịa hình: ${terrain.name}\nChi phí Bộ binh: ${infantryCost ?? 'Không thể đi'}\nTrạng thái: Trống`,
+      `Ô (${this.selectedTile.x}, ${this.selectedTile.y})\nĐịa hình: ${terrain.name}\nChi phí Bộ binh: ${infantryCost ?? 'Không thể đi'}\n${spawnOwner ? `Ô triệu hồi: ${TEAM_NAMES[spawnOwner]}` : 'Ô triệu hồi: Không'}`,
     );
-    this.hintText.setText(
-      this.withStatus('Chọn một đơn vị để tiếp tục ra lệnh.'),
+    this.hintText.setText(this.withStatus('Chọn một đơn vị hoặc chọn quân trong bảng Triệu Hồi để tiếp tục.'));
+  }
+
+  private getValidSpawnTiles(classId: UnitClassId): GridPosition[] {
+    const activeTeam = this.turnManager.getActiveTeam();
+    const definition = UNIT_DEFINITIONS[classId];
+
+    return getSpawnTilesForTeam(activeTeam).filter((position) => {
+      if (this.findUnitAt(position)) return false;
+      if (isFortressTile(position)) return false;
+      return getTerrainMovementCost(position.x, position.y, definition.movementType) !== null;
+    });
+  }
+
+  private canSummonAt(classId: UnitClassId, position: GridPosition): boolean {
+    return this.getValidSpawnTiles(classId).some(
+      (candidate) => candidate.x === position.x && candidate.y === position.y,
+    );
+  }
+
+  private getSpawnOwner(position: GridPosition): TeamId | null {
+    for (const fortress of Object.values(MAIN_FORTRESSES)) {
+      const isSpawn = fortress.spawnTiles.some(
+        (candidate) => candidate.x === position.x && candidate.y === position.y,
+      );
+      if (isSpawn) return fortress.team;
+    }
+    return null;
+  }
+
+  private findFortressAt(position: GridPosition): FortressDefinition | null {
+    return (
+      Object.values(MAIN_FORTRESSES).find(
+        (fortress) =>
+          fortress.position.x === position.x && fortress.position.y === position.y,
+      ) ?? null
     );
   }
 

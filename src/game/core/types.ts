@@ -1,5 +1,7 @@
 export type TeamId = 'xanh' | 'do';
 
+export type MatchPhase = 'trieu-hoi-mo-dau' | 'chien-dau';
+
 export type TerrainId = 'dong-co' | 'rung' | 'doi-da' | 'nuoc-can';
 
 export type MovementType = 'bo-binh' | 'ky-binh' | 'trong-binh' | 'phep';
@@ -67,4 +69,10 @@ export interface TerrainDefinition {
   name: string;
   shortLabel: string;
   movementCost: Record<MovementType, number | null>;
+}
+
+export interface FortressDefinition {
+  team: TeamId;
+  position: GridPosition;
+  spawnTiles: GridPosition[];
 }
