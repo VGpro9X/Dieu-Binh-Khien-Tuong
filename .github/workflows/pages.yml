@@ -50,3 +50,25 @@ jobs:
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Smoke test published site
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          echo "Kiểm tra: $PAGE_URL"
+          HTML="$(curl --retry 12 --retry-delay 2 --retry-all-errors -fsSL "$PAGE_URL")"
+          printf '%s' "$HTML" | grep -q 'Điều Binh Khiển Tướng'
+
+          JS_PATH="$(printf '%s' "$HTML" | grep -oE 'src="[^"]+\.js"' | head -1 | cut -d'"' -f2)"
+          CSS_PATH="$(printf '%s' "$HTML" | grep -oE 'href="[^"]+\.css"' | head -1 | cut -d'"' -f2)"
+
+          test -n "$JS_PATH"
+          test -n "$CSS_PATH"
+
+          JS_URL="$(node -e 'console.log(new URL(process.argv[1], process.argv[2]).href)' "$JS_PATH" "$PAGE_URL")"
+          CSS_URL="$(node -e 'console.log(new URL(process.argv[1], process.argv[2]).href)' "$CSS_PATH" "$PAGE_URL")"
+
+          curl --retry 12 --retry-delay 2 --retry-all-errors -fsSL -o /dev/null "$JS_URL"
+          curl --retry 12 --retry-delay 2 --retry-all-errors -fsSL -o /dev/null "$CSS_URL"
+          echo "Smoke test OK: HTML, JS và CSS đều truy cập được."
