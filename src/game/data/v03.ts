@@ -1,0 +1,163 @@
+import type {
+  CombatUnitState,
+  TeamId,
+  UnitClassId,
+  UnitDefinition,
+} from '../core/types';
+import {
+  BOARD_CONFIG,
+  TERRAIN_DEFINITIONS,
+  TERRAIN_LAYOUT,
+  getTerrainAt,
+  getTerrainMovementCost,
+} from './v02';
+
+export {
+  BOARD_CONFIG,
+  TERRAIN_DEFINITIONS,
+  TERRAIN_LAYOUT,
+  getTerrainAt,
+  getTerrainMovementCost,
+};
+
+export const UNIT_DEFINITIONS: Record<UnitClassId, UnitDefinition> = {
+  linh: {
+    classId: 'linh',
+    name: 'Lính',
+    shortLabel: 'L',
+    role: 'Cân bằng / chiếm tuyến',
+    maxHp: 100,
+    movement: 4,
+    movementType: 'bo-binh',
+    attack: 24,
+    magicAttack: 0,
+    armor: 12,
+    resistance: 8,
+    minAttackRange: 1,
+    maxAttackRange: 1,
+    damageType: 'vat-ly',
+    summonCost: 3,
+  },
+  'cung-thu': {
+    classId: 'cung-thu',
+    name: 'Cung Thủ',
+    shortLabel: 'C',
+    role: 'Sát thương tầm xa',
+    maxHp: 80,
+    movement: 3,
+    movementType: 'bo-binh',
+    attack: 27,
+    magicAttack: 0,
+    armor: 6,
+    resistance: 8,
+    minAttackRange: 2,
+    maxAttackRange: 3,
+    damageType: 'vat-ly',
+    summonCost: 4,
+  },
+  'ky-binh': {
+    classId: 'ky-binh',
+    name: 'Kỵ Binh',
+    shortLabel: 'K',
+    role: 'Cơ động / đột kích',
+    maxHp: 120,
+    movement: 6,
+    movementType: 'ky-binh',
+    attack: 31,
+    magicAttack: 0,
+    armor: 10,
+    resistance: 8,
+    minAttackRange: 1,
+    maxAttackRange: 1,
+    damageType: 'vat-ly',
+    summonCost: 5,
+  },
+  'trong-binh': {
+    classId: 'trong-binh',
+    name: 'Trọng Binh',
+    shortLabel: 'T',
+    role: 'Chống chịu / giữ tuyến',
+    maxHp: 160,
+    movement: 3,
+    movementType: 'trong-binh',
+    attack: 25,
+    magicAttack: 0,
+    armor: 23,
+    resistance: 12,
+    minAttackRange: 1,
+    maxAttackRange: 1,
+    damageType: 'vat-ly',
+    summonCost: 5,
+  },
+  'phap-su': {
+    classId: 'phap-su',
+    name: 'Pháp Sư',
+    shortLabel: 'P',
+    role: 'Sát thương phép tầm xa',
+    maxHp: 75,
+    movement: 3,
+    movementType: 'phep',
+    attack: 8,
+    magicAttack: 35,
+    armor: 5,
+    resistance: 15,
+    minAttackRange: 2,
+    maxAttackRange: 3,
+    damageType: 'phep',
+    summonCost: 6,
+  },
+  'tri-lieu-su': {
+    classId: 'tri-lieu-su',
+    name: 'Trị Liệu Sư',
+    shortLabel: 'H',
+    role: 'Hỗ trợ / hồi phục',
+    maxHp: 90,
+    movement: 4,
+    movementType: 'phep',
+    attack: 7,
+    magicAttack: 17,
+    armor: 7,
+    resistance: 17,
+    minAttackRange: 1,
+    maxAttackRange: 2,
+    damageType: 'phep',
+    summonCost: 5,
+  },
+};
+
+function createUnit(
+  id: string,
+  classId: UnitClassId,
+  team: TeamId,
+  x: number,
+  y: number,
+): CombatUnitState {
+  const definition = UNIT_DEFINITIONS[classId];
+  return {
+    ...definition,
+    id,
+    team,
+    position: { x, y },
+    hp: definition.maxHp,
+    hasMoved: false,
+    hasActed: false,
+  };
+}
+
+const FORMATION: Array<{ classId: UnitClassId; y: number }> = [
+  { classId: 'linh', y: 0 },
+  { classId: 'cung-thu', y: 2 },
+  { classId: 'ky-binh', y: 4 },
+  { classId: 'trong-binh', y: 5 },
+  { classId: 'phap-su', y: 7 },
+  { classId: 'tri-lieu-su', y: 9 },
+];
+
+export const INITIAL_UNITS: CombatUnitState[] = [
+  ...FORMATION.map(({ classId, y }, index) =>
+    createUnit(`xanh-${classId}-${index + 1}`, classId, 'xanh', 5, y),
+  ),
+  ...FORMATION.map(({ classId, y }, index) =>
+    createUnit(`do-${classId}-${index + 1}`, classId, 'do', 8, y),
+  ),
+];
