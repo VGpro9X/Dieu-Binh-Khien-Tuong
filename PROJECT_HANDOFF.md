@@ -27,6 +27,14 @@ Phân bố map ngẫu nhiên nhưng chênh lệch số điểm giữa hai phía 
 
 Lính, Cung Thủ, Kỵ Binh, Trọng Binh, Pháp Sư, Trị Liệu Sư.
 
+## Luật lượt hiện tại
+
+- Mỗi unit có 1 lần di chuyển và 1 hành động trong lượt.
+- Có thể di chuyển rồi tấn công hoặc tấn công rồi di chuyển.
+- Kết thúc lượt sẽ phục hồi quyền di chuyển/hành động cho phe kế tiếp.
+- Combat V0.3 dùng Công vật lý/Công phép, Giáp/Kháng phép, tầm đánh và damage preview.
+- Trị Liệu Sư hiện mới dùng đòn đánh cơ bản; heal thật sẽ triển khai ở mốc Mana & Skills.
+
 ## Quy trình version
 
 Sau mỗi mốc V0.x hoàn chỉnh:
@@ -34,9 +42,20 @@ Sau mỗi mốc V0.x hoàn chỉnh:
 1. Build/typecheck.
 2. Push code lên `main`.
 3. Deploy bản test lên GitHub Pages.
-4. Báo người dùng phiên bản, thay đổi chính và URL test.
-5. Chờ phản hồi test trước khi chuyển sang mốc V kế tiếp.
+4. Smoke test URL public và asset.
+5. Báo người dùng phiên bản, thay đổi chính và URL test.
+6. Chờ phản hồi test trước khi chuyển sang mốc V kế tiếp.
 
 ## Phiên bản hiện tại
 
-V0.1 — Nền móng board/turn/UI.
+**V0.3 — Combat Core**
+
+Đã có:
+- Board/turn/UI tiếng Việt.
+- Pathfinding và chi phí địa hình.
+- Unit blocking và animation di chuyển.
+- 6 lớp quân data-driven.
+- HP, Công, Phép, Giáp, Kháng, tầm đánh.
+- Preview sát thương, attack animation, health bar và chết unit.
+
+Mốc tiếp theo: **V0.4 — Điểm Điều Binh & Triệu Hồi**.
