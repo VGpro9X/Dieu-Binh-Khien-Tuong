@@ -2,26 +2,39 @@
 
 Web game chiến thuật theo lượt trên bàn cờ 2D, định hướng nâng cấp dần lên phong cách 2D + animation/effect tạo cảm giác 2.5D.
 
-## Phiên bản hiện tại: V0.1
+## Phiên bản hiện tại: V0.2
 
-V0.1 tập trung dựng nền móng kỹ thuật:
+V0.2 tập trung hoàn thiện hệ di chuyển chiến thuật:
 
 - Phaser 4.2.1 + TypeScript + Vite.
-- Bàn cờ 14 × 10.
-- Hai phe: Phe Xanh và Phe Đỏ.
-- Chọn ô và chọn đơn vị.
-- Hiển thị thông tin đơn vị/ô đang chọn.
-- Turn Manager và nút Kết thúc lượt.
-- UI trong game bằng tiếng Việt.
-- Tách dữ liệu bàn cờ, dữ liệu quân và logic lượt khỏi scene hiển thị.
-- Chuẩn bị GitHub Pages để test trực tiếp trên web.
+- Bàn cờ 14 × 10 và hai phe Phe Xanh/Phe Đỏ.
+- Chọn quân thuộc phe đang tới lượt để hiện vùng có thể di chuyển.
+- Pathfinding theo 4 hướng, tự tìm tuyến có tổng chi phí thấp nhất.
+- Địa hình có chi phí di chuyển khác nhau: Đồng cỏ, Rừng, Đồi đá, Nước cạn.
+- Hỗ trợ loại địa hình không thể đi qua theo loại di chuyển; Nước cạn hiện đã chặn Kỵ binh trong data để chuẩn bị cho các unit sau này.
+- Đơn vị khác chặn đường và không thể đứng chồng lên nhau.
+- Mỗi đơn vị được di chuyển một lần trong lượt hiện tại.
+- Rê chuột lên ô hợp lệ để xem trước đường đi.
+- Animation di chuyển từng ô cơ bản.
+- Giao diện và toàn bộ nội dung trong game bằng tiếng Việt.
+- GitHub Pages tự build/deploy; workflow có smoke test trang và asset sau deploy.
 
-> Các quân trong V0.1 chỉ là quân mẫu phục vụ kiểm thử board/turn. Cơ chế triệu hồi chính thức sẽ được triển khai ở V0.4.
+> Các quân trong V0.2 vẫn là quân mẫu phục vụ kiểm thử movement. Hệ chỉ số chiến đấu và 6 loại quân chính thức sẽ được triển khai ở V0.3. Cơ chế triệu hồi chính thức sẽ được triển khai ở V0.4.
+
+## Cách test V0.2
+
+1. Chọn Lính hoặc Cung Thủ của phe đang tới lượt.
+2. Các ô màu xanh là những ô có thể đi tới trong giới hạn điểm di chuyển.
+3. Rê chuột lên ô xanh để xem đường đi màu cam.
+4. Bấm ô xanh để di chuyển.
+5. Thử đi qua Rừng/Đồi/Nước để thấy phạm vi thay đổi theo chi phí địa hình.
+6. Thử dùng một quân chắn lối quân còn lại.
+7. Bấm **Kết thúc lượt** để chuyển phe và hồi quyền di chuyển cho phe mới.
 
 ## Roadmap
 
-- **V0.1 — Nền móng:** board, chọn ô/quân, hai phe, lượt, UI tiếng Việt.
-- **V0.2 — Di chuyển:** movement range, pathfinding, terrain movement cost, unit blocking, animation cơ bản.
+- **V0.1 — Nền móng:** board, chọn ô/quân, hai phe, lượt, UI tiếng Việt. ✅
+- **V0.2 — Di chuyển:** movement range, pathfinding, terrain movement cost, unit blocking, animation cơ bản. ✅
 - **V0.3 — Combat:** HP, Attack, Armor, Resistance, range, damage preview, chết đơn vị, 6 loại quân ban đầu.
 - **V0.4 — Điểm Điều Binh & Triệu Hồi:** mở đầu triệu hồi 1 đơn vị; từ lượt chính thức có thể triệu hồi nhiều đơn vị tùy tài nguyên và ô spawn.
 - **V0.5 — Chiếm đóng:** Nhà, Nước, Rừng, Núi, Vàng, Bạc, Sắt, Thành Trì, ownership và buff.
