@@ -2,7 +2,27 @@
 
 Web game chiến thuật theo lượt trên bàn cờ 2D, định hướng nâng cấp dần thành 2D + animation/effect tạo cảm giác 2.5D.
 
-## Phiên bản hiện tại: V0.7
+## Phiên bản hiện tại: V0.8 — AI chiến thuật
+
+- **Phe Xanh do người chơi điều khiển; Phe Đỏ do máy điều khiển mặc định.** Máy tự triệu hồi một quân mở đầu sau Phe Xanh.
+- Khi Phe Xanh kết thúc lượt, Phe Đỏ tự xử lý lần lượt các nước đi: triệu hồi, chiếm điểm, dùng Hỏa Cầu/Trị Liệu (nếu phù hợp), tấn công, di chuyển và kết thúc lượt.
+- Quyết định chiếm đóng dùng cả giá trị tài nguyên và khoảng cách; AI chuyển sang bảo vệ Thành Chính nếu quân Xanh đến gần.
+- Khi đang có lợi thế quân số, AI có thể giữ Điểm Điều Binh thay vì triệu hồi liên tục; gặp nguy hiểm, AI ưu tiên gọi Trọng Binh/Cung Thủ.
+- AI sử dụng trực tiếp luật movement, combat, summon, capture và Mana/status của V0.2–V0.7; không có quân miễn phí hoặc sát thương ngoài luật.
+- Bấm **PHE ĐỎ: MÁY • ĐỔI CHẾ ĐỘ** trong lượt Phe Xanh để chuyển sang 2 người trên cùng thiết bị; cũng có thể dùng URL với `?mode=2p`. Việc đổi chế độ không reset trận.
+- Giữ nguyên Random Map Generator + seed của V0.6 và toàn bộ tính năng Mana & Skills V0.7.
+- Bộ AI tách riêng thành `src/game/ai/AIPlanner.ts`, kèm kiểm thử quyết định trong `tests/ai-planner.test.mjs`.
+
+### Cách test V0.8
+
+1. Mở game, giữ chế độ **Phe Đỏ: Máy** và triệu hồi một quân cho Phe Xanh. Phe Đỏ phải tự triệu hồi quân mở đầu.
+2. Kết thúc lượt Xanh để máy triệu hồi (nếu đủ điểm), di chuyển về phía tài nguyên, chiếm điểm hoặc giao tranh tùy tình hình.
+3. Tiến quân Xanh đến gần Thành Chính Đỏ để quan sát máy ưu tiên phòng thủ, rồi thử để máy có ưu thế quân số xem máy có tích Điểm Điều Binh.
+4. Tiếp tục vài lượt để thử Hỏa Cầu, Trị Liệu, hồi Mana và hiệu ứng theo lượt khi máy có các lớp quân phù hợp.
+5. Trong lượt Xanh, bấm nút đổi chế độ; ở lượt tiếp theo, Phe Đỏ phải chờ người thứ hai thao tác thay vì tự đi.
+6. Thử **MAP MỚI**, kiểm tra seed và việc AI vận hành trên bản đồ mới.
+
+## Mốc V0.7 đã hoàn thành
 
 V0.7 đưa **Mana, kỹ năng chủ động, nội tại và status effect** vào vòng lặp chiến đấu:
 
@@ -41,7 +61,7 @@ V0.7 đưa **Mana, kỹ năng chủ động, nội tại và status effect** và
 - **V0.5 — Chiếm đóng & lãnh thổ:** 8 loại điểm chiến lược, ownership, income, buff, Thành Trì mở spawn. ✅
 - **V0.6 — Random Map Generator:** seed, phân bố 4–6, BalanceValue, cân bằng khoảng cách và vùng tranh chấp. ✅
 - **V0.7 — Mana & Skills:** kỹ năng chủ động/bị động, Mana, effect/status, Pháp Sư và Trị Liệu Sư. ✅
-- **V0.8 — AI:** chiếm tài nguyên, giao tranh, phòng thủ, triệu hồi và tích tài nguyên.
+- **V0.8 — AI:** chiếm tài nguyên, giao tranh, phòng thủ, triệu hồi và tích tài nguyên. ✅
 - **V0.9 — Visual 2.5D:** shadow, tween, projectile, camera effect, particle và terrain animation.
 - **V1.0 — Skirmish hoàn chỉnh:** menu, map/seed, AI difficulty, thắng/thua, responsive, âm thanh và polish.
 

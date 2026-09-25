@@ -37,12 +37,23 @@
 - Kỹ năng tiêu hao slot Hành động, không tiêu hao slot Di chuyển.
 - Hệ skill/mana/status được khai báo data-driven tại `src/game/data/v07.ts`.
 
+## AI V0.8
+
+- Phe Đỏ do máy điều khiển mặc định; Phe Xanh do người chơi.
+- Nút đổi chế độ trong lượt Phe Xanh: chuyển sang chế độ 2 người tại chỗ, không reset trận. URL `?mode=2p` khởi động ở chế độ 2 người.
+- AI tự triệu hồi đúng 1 quân mở đầu; trong lượt chiến đấu có thể triệu hồi nhiều quân nếu còn tài nguyên/ô trống, ưu tiên phòng thủ khi quân địch áp sát Thành Chính.
+- Lựa chọn chiến thuật dựa trên tài nguyên chưa sở hữu, BalanceValue, khoảng cách, quân địch trong tầm, HP đồng minh, Mana và số quân hai bên.
+- AI có thể tích lũy Điểm Điều Binh khi quân số đã đủ; ưu tiên Trọng Binh/Cung Thủ khi Thành Chính bị đe dọa.
+- AI dùng chính logic luật có sẵn: summon, capture, attack, move, castFireball, castHealing, endTurn.
+- Pure planner: `src/game/ai/AIPlanner.ts`; scene adapter: `src/game/scenes/BattleSceneV08.ts`.
+- Unit tests: `npm test`; GitHub Pages workflow chạy tests trước typecheck/build/deploy.
+
 ## Unit ban đầu
 
 Lính, Cung Thủ, Kỵ Binh, Trọng Binh, Pháp Sư, Trị Liệu Sư.
 
 ## Phiên bản hiện tại
 
-**V0.7 — Mana & Skills.**
+**V0.8 — AI chiến thuật.**
 
-Mốc tiếp theo sau khi user test/duyệt: **V0.8 — AI**.
+Mốc tiếp theo sau khi user test/duyệt: **V0.9 — Visual 2.5D**.
