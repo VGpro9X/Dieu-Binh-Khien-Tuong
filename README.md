@@ -2,31 +2,35 @@
 
 Web game chiến thuật theo lượt trên bàn cờ 2D, định hướng nâng cấp dần thành 2D + animation/effect tạo cảm giác 2.5D.
 
-## Phiên bản hiện tại: V0.6
+## Phiên bản hiện tại: V0.7
 
-V0.6 thay map chiến lược cố định của V0.5 bằng **Random Map Generator có seed**:
+V0.7 đưa **Mana, kỹ năng chủ động, nội tại và status effect** vào vòng lặp chiến đấu:
 
-- Giữ nguyên movement, combat, Điểm Điều Binh, triệu hồi, chiếm đóng, ownership, income và buff của V0.5.
-- Mỗi trận có **12 điểm chiến lược**: 10 điểm phân bố về hai nửa bản đồ và 2 điểm tranh chấp gần trung tâm.
-- Phân bố hai nửa chỉ có thể là **4–6, 5–5 hoặc 6–4**.
-- Loại tài nguyên được chia bằng `BalanceValue`; generator tìm tổ hợp để chênh lệch tổng giá trị hai phía thấp nhất.
-- Các vị trí ghép cặp theo phép đối xứng 180° để giữ khoảng cách tới Thành Chính tương đương; phía có thêm điểm sẽ ưu tiên vị trí có khoảng cách trung bình gần phía còn lại.
-- Seed nằm trong URL qua tham số `?seed=...`. Reload đúng URL sẽ tạo lại đúng map.
-- Nếu URL chưa có seed, game tự tạo seed mới rồi ghi vào URL bằng History API.
-- Có nút **MAP MỚI** để sinh seed khác và tải một bản đồ khác.
-- Thanh trên cùng hiển thị seed, số điểm, tổng BalanceValue và độ lệch khoảng cách để dễ kiểm tra cân bằng.
-- `generateStrategicMap(seed)` tách riêng khỏi scene để V0.8 AI/V1.0 menu map có thể tái sử dụng.
+- Giữ nguyên toàn bộ Random Map Generator V0.6, movement, combat, triệu hồi, chiếm đóng, income và buff lãnh thổ.
+- Pháp Sư và Trị Liệu Sư có **100 Mana tối đa**, bắt đầu với **60 Mana**.
+- Pháp Sư có kỹ năng **Hỏa Cầu**: tốn 35 Mana, tầm 2–4, gây sát thương phép và áp **Thiêu Đốt** 2 lượt.
+- **Thiêu Đốt** gây 7 HP sát thương ở đầu lượt của phe sở hữu mục tiêu, kéo dài 2 lượt.
+- Nội tại Pháp Sư **Dẫn Ma**: hồi 20 Mana đầu lượt.
+- Trị Liệu Sư có kỹ năng **Trị Liệu**: tốn 30 Mana, tầm 0–3, hồi 38 HP và áp **Hồi Phục**.
+- **Hồi Phục** hồi 6 HP đầu lượt trong 2 lượt.
+- Nội tại Trị Liệu Sư **Từ Tâm**: mỗi lần dùng Trị Liệu luôn ban Hồi Phục.
+- Trị Liệu Sư hồi 15 Mana đầu lượt.
+- **Nguồn Nước** nay hoàn thiện chức năng đã để dành từ V0.5: mỗi Nguồn Nước sở hữu cho thêm **+10 Mana/đầu lượt** cho từng Pháp Sư và Trị Liệu Sư của phe.
+- Kỹ năng dùng cùng slot **Hành động** với tấn công/chiếm đóng: đã dùng kỹ năng thì không thể tấn công hoặc chiếm đóng trong lượt đó, nhưng vẫn có thể di chuyển nếu chưa di chuyển.
+- Khi bật chế độ kỹ năng, các mục tiêu hợp lệ được viền nổi bật trực tiếp trên bàn cờ.
+- Mana và status hiện trong bảng thông tin của đơn vị đang chọn.
 
-## Cách test V0.6
+## Cách test V0.7
 
-1. Mở bản Pages và nhìn dòng V0.6 + seed trên đầu màn hình.
-2. Ghi lại vị trí các điểm chiến lược rồi reload trang: cùng seed phải cho đúng cùng bố cục.
-3. Bấm **MAP MỚI**: seed trong URL và bố cục điểm chiến lược phải đổi.
-4. Thử nhiều map và kiểm tra số điểm Tây/Đông chỉ rơi vào 4–6, 5–5 hoặc 6–4.
-5. Quan sát dòng cân bằng: `BV` là tổng BalanceValue của 10 điểm hai phía; `ΔBV` phải rất nhỏ.
-6. Hoàn tất triệu hồi mở đầu, di chuyển, combat và chiếm điểm để xác nhận toàn bộ luật V0.5 vẫn hoạt động.
-7. Chiếm Thành Trì ngẫu nhiên rồi mở Triệu Hồi để xác nhận vùng triển khai bổ sung vẫn hoạt động.
-8. Copy URL có `seed`, mở lại ở tab/điện thoại khác để xác nhận map tái tạo giống nhau.
+1. Triệu hồi **Pháp Sư** cho một phe và hoàn tất giai đoạn mở đầu.
+2. Chọn Pháp Sư, kiểm tra bảng thông tin có Mana và nút **HỎA CẦU • 35 MANA** phía trên bàn cờ.
+3. Bấm Hỏa Cầu rồi chọn một quân địch trong tầm 2–4; xác nhận mất Mana, dùng hành động và mục tiêu nhận Thiêu Đốt.
+4. Kết thúc lượt đến lượt của phe bị đốt; kiểm tra Thiêu Đốt trừ HP và giảm số lượt hiệu lực.
+5. Triệu hồi **Trị Liệu Sư**, gây thương tích cho một đồng minh rồi dùng **Trị Liệu** trong tầm 0–3.
+6. Kiểm tra đồng minh hồi HP ngay và nhận **Hồi Phục(2)**; qua các lượt sau hồi thêm 6 HP.
+7. Chiếm **Nguồn Nước**, kết thúc lượt rồi quan sát lượng Mana hồi thêm cho Pháp Sư/Trị Liệu Sư.
+8. Kiểm tra sau khi dùng kỹ năng vẫn có thể di chuyển nếu chưa đi, nhưng không thể tấn công/chiếm đóng vì hành động đã dùng.
+9. Bấm **MAP MỚI** để xác nhận random map V0.6 vẫn hoạt động bình thường.
 
 ## Roadmap
 
@@ -36,7 +40,7 @@ V0.6 thay map chiến lược cố định của V0.5 bằng **Random Map Genera
 - **V0.4 — Điểm Điều Binh & Triệu Hồi:** mở đầu 1 quân; từ lượt chính triệu hồi nhiều quân tùy tài nguyên/ô trống. ✅
 - **V0.5 — Chiếm đóng & lãnh thổ:** 8 loại điểm chiến lược, ownership, income, buff, Thành Trì mở spawn. ✅
 - **V0.6 — Random Map Generator:** seed, phân bố 4–6, BalanceValue, cân bằng khoảng cách và vùng tranh chấp. ✅
-- **V0.7 — Mana & Skills:** kỹ năng chủ động/bị động, Mana, effect/status, Pháp Sư và Trị Liệu Sư.
+- **V0.7 — Mana & Skills:** kỹ năng chủ động/bị động, Mana, effect/status, Pháp Sư và Trị Liệu Sư. ✅
 - **V0.8 — AI:** chiếm tài nguyên, giao tranh, phòng thủ, triệu hồi và tích tài nguyên.
 - **V0.9 — Visual 2.5D:** shadow, tween, projectile, camera effect, particle và terrain animation.
 - **V1.0 — Skirmish hoàn chỉnh:** menu, map/seed, AI difficulty, thắng/thua, responsive, âm thanh và polish.

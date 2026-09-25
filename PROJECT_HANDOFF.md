@@ -8,7 +8,7 @@
 - Unit, terrain, tài nguyên và skill đi theo hướng data-driven.
 - Sau mỗi mốc V0.x: build/typecheck → deploy GitHub Pages → dừng để user test trước khi sang bản tiếp.
 
-## Cơ chế triệu hồi đã chốt
+## Cơ chế triệu hồi
 
 - Mở trận: mỗi phe triệu hồi đúng 1 đơn vị.
 - Từ lượt chiến đấu: không giới hạn 1 quân/lượt; có thể tiêu hết Điểm Điều Binh nếu còn ô triển khai.
@@ -16,29 +16,26 @@
 - Thành Chính có 8 ô triển khai quanh Thành.
 - Thành Trì chiếm được mở thêm vùng triển khai quân quanh nó.
 
-## Kinh tế và lãnh thổ
+## Kinh tế, lãnh thổ và map
 
-- Bắt đầu: 8 Điểm Điều Binh mỗi phe.
-- Thu nhập cơ bản: +3/lượt.
-- Điểm chiến lược đã chiếm cộng thêm thu nhập đầu lượt.
-- Điểm chưa dùng được giữ lại để tích lực.
-- Chiếm đóng dùng 1 hành động khi quân đứng trực tiếp trên điểm.
-- Buff tồn tại theo ownership và mất ngay khi điểm đổi chủ.
+- Bắt đầu: 8 Điểm Điều Binh mỗi phe; thu nhập cơ bản +3/lượt.
+- Điểm chiến lược cộng thu nhập/buff theo ownership.
+- V0.6: map có seed, 12 điểm, phân bố Tây/Đông 4–6 / 5–5 / 6–4, cân bằng BalanceValue + khoảng cách.
+- Seed nằm trong `?seed=...`; nút MAP MỚI sinh seed khác.
 
-Các loại điểm: Nhà, Nguồn Nước, Rừng, Núi, Mỏ Vàng, Mỏ Bạc, Mỏ Sắt, Thành Trì.
+## Mana & Skills V0.7
 
-## Random Map Generator V0.6
-
-- Mỗi map có seed và có thể tái tạo hoàn toàn.
-- Seed được lưu trong query `?seed=...`; cùng seed = cùng bố cục.
-- 12 điểm chiến lược: 10 điểm thuộc hai vùng Tây/Đông + 2 điểm tranh chấp trung tâm.
-- Số điểm Tây/Đông giới hạn ở 4–6, 5–5 hoặc 6–4.
-- Pool 10 điểm hai phía được partition bằng `BalanceValue` để tối thiểu hóa chênh lệch tổng giá trị.
-- Vị trí cặp Tây/Đông đối xứng 180° để cân bằng khoảng cách tới hai Thành Chính.
-- Nếu một phía có 6 điểm, các điểm thêm được chọn để giữ khoảng cách trung bình gần phía còn lại.
-- UI hiển thị seed, số điểm, tổng BV, ΔBV và Δ khoảng cách.
-- Nút **MAP MỚI** sinh seed khác.
-- Generator nằm ở `src/game/data/v06.ts`; scene V0.6 tái sử dụng toàn bộ gameplay V0.5 bằng cách truyền danh sách strategic points vào constructor.
+- Mana hiện áp dụng cho Pháp Sư và Trị Liệu Sư: 100 tối đa, 60 khởi đầu.
+- Pháp Sư: **Hỏa Cầu**, 35 Mana, tầm 2–4, sát thương phép + Thiêu Đốt.
+- Nội tại Pháp Sư **Dẫn Ma**: hồi 20 Mana đầu lượt.
+- Trị Liệu Sư: **Trị Liệu**, 30 Mana, tầm 0–3, hồi 38 HP + Hồi Phục.
+- Nội tại Trị Liệu Sư **Từ Tâm**: Trị Liệu luôn ban Hồi Phục.
+- Trị Liệu Sư hồi 15 Mana đầu lượt.
+- Nguồn Nước: ngoài +1 Điểm/lượt và hồi 4 HP như V0.5, từ V0.7 mỗi điểm còn cho +10 Mana/đầu lượt cho từng Pháp Sư/Trị Liệu Sư của phe.
+- Thiêu Đốt: -7 HP đầu lượt × 2 lượt.
+- Hồi Phục: +6 HP đầu lượt × 2 lượt.
+- Kỹ năng tiêu hao slot Hành động, không tiêu hao slot Di chuyển.
+- Hệ skill/mana/status được khai báo data-driven tại `src/game/data/v07.ts`.
 
 ## Unit ban đầu
 
@@ -46,6 +43,6 @@ Lính, Cung Thủ, Kỵ Binh, Trọng Binh, Pháp Sư, Trị Liệu Sư.
 
 ## Phiên bản hiện tại
 
-**V0.6 — Random Map Generator.**
+**V0.7 — Mana & Skills.**
 
-Mốc tiếp theo sau khi user test/duyệt: **V0.7 — Mana & Skills**.
+Mốc tiếp theo sau khi user test/duyệt: **V0.8 — AI**.
