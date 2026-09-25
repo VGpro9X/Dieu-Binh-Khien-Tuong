@@ -2,7 +2,29 @@
 
 Web game chiến thuật theo lượt trên bàn cờ 2D, định hướng nâng cấp dần thành 2D + animation/effect tạo cảm giác 2.5D.
 
-## Phiên bản hiện tại: V0.8 — AI chiến thuật
+## Phiên bản hiện tại: V0.9 — Chiến trường 2.5D
+
+V0.9 tập trung vào đồ họa vector 2D có chiều sâu mà không thay đổi luật chơi từ V0.1–V0.8:
+
+- **Địa hình mới:** phối màu từng loại địa hình, ô bàn cờ có cạnh nổi, họa tiết cỏ/rừng/đồi đá/nước cạn dựng bằng Graphics. Họa tiết được sinh ổn định theo map seed.
+- **Thành Chính và điểm chiến lược:** thêm bóng đổ, tháp canh, bệ 3D giả lập, vòng sáng theo màu phe kiểm soát.
+- **6 lớp quân:** mỗi quân có bệ nổi, bóng, ánh sáng và biểu tượng vector riêng theo vai trò; nhãn và thanh máu cũ vẫn hiển thị.
+- **Chiến đấu:** các đòn đánh có đường bay riêng theo lớp quân và hiệu ứng va chạm, tia sáng, hạt văng; Hỏa Cầu có vệt lửa và hiệu ứng nổ; Trị Liệu có vòng hồi phục xanh ngọc.
+- **Động tác trận:** hiệu ứng triệu hồi, đường bụi khi di chuyển, bùng sáng khi chiếm điểm, hiệu ứng mất quân, thông báo chuyển lượt và popup cho tick Thiêu Đốt/Hồi Phục.
+- **Giảm hiệu ứng trên điện thoại:** nút `FX: ĐẦY ĐỦ / FX: GỌN` ở phía trên bên trái; chế độ gọn giới hạn hạt và tắt rung màn hình. Thiết bị màn hình nhỏ hoặc bật Reduced Motion khởi động mặc định với FX GỌN.
+- **Giữ nguyên gameplay:** AI Phe Đỏ, chuyển chế độ hai người, random map/seed, 6 loại quân, Mana/Skills, lãnh thổ và kinh tế.
+- Visual effects nằm riêng tại `src/game/visual/BattlefieldVisuals.ts`, cấu hình tại `src/game/visual/visual-config.ts` và scene kế thừa tại `src/game/scenes/BattleSceneV09.ts`. Bộ test mới: `tests/visual-config.test.mjs`.
+
+### Cách test V0.9
+
+1. Mở game và triệu hồi Lính/Pháp Sư/Trị Liệu Sư; quan sát hình dạng quân, bệ và bóng đổ mới, cùng hiệu ứng triệu hồi.
+2. Cho quân di chuyển qua cỏ, rừng, nước cạn/đồi đá; kiểm tra họa tiết rõ ràng, đường đi/tầm đánh và vị trí quân không bị lệch.
+3. Giao tranh bằng cung, kiếm và Hỏa Cầu; thử Trị Liệu để kiểm tra projectile và va chạm riêng.
+4. Chiếm một điểm chiến lược để xem vòng sáng thay màu; kết thúc lượt để xem banner, Thiêu Đốt/Hồi Phục nếu có.
+5. Bấm `FX: ĐẦY ĐỦ` / `FX: GỌN` rồi lặp lại giao tranh; kiểm tra luật, chỉ số và kết quả không thay đổi.
+6. Để Phe Đỏ ở chế độ AI trong vài lượt, rồi thử `MAP MỚI`. Kiểm tra hiệu ứng cũng chạy trên các hành động của AI.
+
+## Mốc V0.8 — AI chiến thuật
 
 - **Phe Xanh do người chơi điều khiển; Phe Đỏ do máy điều khiển mặc định.** Máy tự triệu hồi một quân mở đầu sau Phe Xanh.
 - Khi Phe Xanh kết thúc lượt, Phe Đỏ tự xử lý lần lượt các nước đi: triệu hồi, chiếm điểm, dùng Hỏa Cầu/Trị Liệu (nếu phù hợp), tấn công, di chuyển và kết thúc lượt.
@@ -62,7 +84,7 @@ V0.7 đưa **Mana, kỹ năng chủ động, nội tại và status effect** và
 - **V0.6 — Random Map Generator:** seed, phân bố 4–6, BalanceValue, cân bằng khoảng cách và vùng tranh chấp. ✅
 - **V0.7 — Mana & Skills:** kỹ năng chủ động/bị động, Mana, effect/status, Pháp Sư và Trị Liệu Sư. ✅
 - **V0.8 — AI:** chiếm tài nguyên, giao tranh, phòng thủ, triệu hồi và tích tài nguyên. ✅
-- **V0.9 — Visual 2.5D:** shadow, tween, projectile, camera effect, particle và terrain animation.
+- **V0.9 — Visual 2.5D:** shadow, tween, projectile, camera effect, particle và terrain animation. ✅
 - **V1.0 — Skirmish hoàn chỉnh:** menu, map/seed, AI difficulty, thắng/thua, responsive, âm thanh và polish.
 
 ## Chạy local

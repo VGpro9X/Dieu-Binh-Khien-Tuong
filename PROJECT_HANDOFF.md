@@ -48,12 +48,23 @@
 - Pure planner: `src/game/ai/AIPlanner.ts`; scene adapter: `src/game/scenes/BattleSceneV08.ts`.
 - Unit tests: `npm test`; GitHub Pages workflow chạy tests trước typecheck/build/deploy.
 
+## Visual 2.5D V0.9
+
+- Không thay core sang 3D, không thay luật di chuyển/đánh/triệu hồi/AI.
+- Đổi bảng màu nền và decal địa hình per-tile theo seed; tất cả decal là Graphics không có hitbox tương tác.
+- Thành Chính, điểm chiến lược và quân có bệ/bóng, biểu tượng vector theo class, vòng sáng theo ownership.
+- Đòn đánh/skill dùng projectile được render tách riêng, không nhân đôi sát thương hoặc thay Mana.
+- Wrapper visual bắt được cả hành động người chơi lẫn AI: attack, Hỏa Cầu, Trị Liệu, di chuyển, triệu hồi, chiếm đóng, mất quân, status đầu lượt, chuyển lượt.
+- Nút FX đầy đủ/gọn ở góc trên: gọn giảm particle + camera shake; tự gọn trên màn hình nhỏ/Reduced Motion.
+- Config không phụ thuộc Phaser nằm ở `src/game/visual/visual-config.ts`, visual renderer là `BattlefieldVisuals.ts`, adapter là `BattleSceneV09.ts`. Test: `tests/visual-config.test.mjs`.
+- V0.9 không triển khai responsive bố cục hoàn chỉnh: việc đó vẫn nằm ở V1.0. Cần user test trên điện thoại trước khi nâng tiếp.
+
 ## Unit ban đầu
 
 Lính, Cung Thủ, Kỵ Binh, Trọng Binh, Pháp Sư, Trị Liệu Sư.
 
 ## Phiên bản hiện tại
 
-**V0.8 — AI chiến thuật.**
+**V0.9 — Chiến trường 2.5D.**
 
-Mốc tiếp theo sau khi user test/duyệt: **V0.9 — Visual 2.5D**.
+Mốc tiếp theo sau khi user test/duyệt: **V1.0 — Skirmish hoàn chỉnh (menu, chọn map/seed, AI difficulty, điều kiện thắng/thua, responsive, âm thanh/polish)**.
