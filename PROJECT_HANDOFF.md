@@ -14,29 +14,31 @@
 - Từ lượt chiến đấu: không giới hạn 1 quân/lượt; có thể tiêu hết Điểm Điều Binh nếu còn ô triển khai.
 - Quân mới được hành động ngay.
 - Thành Chính có 8 ô triển khai quanh Thành.
-- Từ V0.5, Thành Trì chiếm được mở thêm vùng triển khai quân quanh nó.
+- Thành Trì chiếm được mở thêm vùng triển khai quân quanh nó.
 
-## Kinh tế hiện tại
+## Kinh tế và lãnh thổ
 
 - Bắt đầu: 8 Điểm Điều Binh mỗi phe.
 - Thu nhập cơ bản: +3/lượt.
 - Điểm chiến lược đã chiếm cộng thêm thu nhập đầu lượt.
 - Điểm chưa dùng được giữ lại để tích lực.
+- Chiếm đóng dùng 1 hành động khi quân đứng trực tiếp trên điểm.
+- Buff tồn tại theo ownership và mất ngay khi điểm đổi chủ.
 
-## Hệ lãnh thổ V0.5
+Các loại điểm: Nhà, Nguồn Nước, Rừng, Núi, Mỏ Vàng, Mỏ Bạc, Mỏ Sắt, Thành Trì.
 
-Quân đứng trực tiếp trên điểm chiến lược có thể dùng 1 hành động **Chiếm đóng**. Quyền sở hữu tồn tại cho đến khi đối thủ chiếm lại. Buff không tăng theo thời gian giữ; mất điểm là mất buff ngay.
+## Random Map Generator V0.6
 
-- Nhà: +1 Điểm/lượt, hồi 6 HP đầu lượt.
-- Nguồn Nước: +1 Điểm/lượt, V0.5 hồi 4 HP; V0.7 sẽ nối Mana.
-- Rừng: +1 Điểm/lượt, +1 Giáp +1 Kháng.
-- Núi: +1 Điểm/lượt, +2 Giáp.
-- Mỏ Vàng: +2 Điểm/lượt.
-- Mỏ Bạc: +1 Điểm/lượt, +2 Kháng.
-- Mỏ Sắt: +1 Điểm/lượt, +2 Giáp.
-- Thành Trì: +2 Điểm/lượt, mở điểm triển khai.
-
-Mỗi điểm có `BalanceValue`; V0.6 sẽ dùng để tạo map random có seed, giới hạn chênh lệch số điểm hai phía tối đa 6–4 và cân bằng cả giá trị lẫn khoảng cách.
+- Mỗi map có seed và có thể tái tạo hoàn toàn.
+- Seed được lưu trong query `?seed=...`; cùng seed = cùng bố cục.
+- 12 điểm chiến lược: 10 điểm thuộc hai vùng Tây/Đông + 2 điểm tranh chấp trung tâm.
+- Số điểm Tây/Đông giới hạn ở 4–6, 5–5 hoặc 6–4.
+- Pool 10 điểm hai phía được partition bằng `BalanceValue` để tối thiểu hóa chênh lệch tổng giá trị.
+- Vị trí cặp Tây/Đông đối xứng 180° để cân bằng khoảng cách tới hai Thành Chính.
+- Nếu một phía có 6 điểm, các điểm thêm được chọn để giữ khoảng cách trung bình gần phía còn lại.
+- UI hiển thị seed, số điểm, tổng BV, ΔBV và Δ khoảng cách.
+- Nút **MAP MỚI** sinh seed khác.
+- Generator nằm ở `src/game/data/v06.ts`; scene V0.6 tái sử dụng toàn bộ gameplay V0.5 bằng cách truyền danh sách strategic points vào constructor.
 
 ## Unit ban đầu
 
@@ -44,6 +46,6 @@ Lính, Cung Thủ, Kỵ Binh, Trọng Binh, Pháp Sư, Trị Liệu Sư.
 
 ## Phiên bản hiện tại
 
-**V0.5 — Chiếm đóng & tài nguyên lãnh thổ.**
+**V0.6 — Random Map Generator.**
 
-Mốc tiếp theo sau khi user test/duyệt: **V0.6 — Random Map Generator**.
+Mốc tiếp theo sau khi user test/duyệt: **V0.7 — Mana & Skills**.

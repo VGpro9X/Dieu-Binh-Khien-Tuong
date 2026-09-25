@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import './styles.css';
-import { BattleScene } from './game/scenes/BattleSceneV05';
+import { BattleScene } from './game/scenes/BattleSceneV06';
 
 const bootStatus = document.getElementById('boot-status');
 

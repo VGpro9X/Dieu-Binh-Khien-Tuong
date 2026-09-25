@@ -4,6 +4,7 @@ import { TerritoryManager } from '../core/TerritoryManager';
 import type {
   CombatUnitState,
   GridPosition,
+  StrategicPointDefinition,
   StrategicPointType,
   TeamId,
   UnitClassId,
@@ -45,8 +46,13 @@ const STRATEGIC_COLORS: Record<StrategicPointType, number> = {
 };
 
 export class BattleScene extends BattleSceneV04 {
-  private readonly territoryManagerV05 = new TerritoryManager(STRATEGIC_POINTS);
+  private readonly territoryManagerV05: TerritoryManager;
   private readonly strategicViewsV05 = new Map<string, StrategicView>();
+
+  constructor(strategicPoints: StrategicPointDefinition[] = STRATEGIC_POINTS) {
+    super();
+    this.territoryManagerV05 = new TerritoryManager(strategicPoints);
+  }
 
   private territoryInfoTextV05!: Phaser.GameObjects.Text;
   private captureButtonV05!: Phaser.GameObjects.Rectangle;
